@@ -1,0 +1,325 @@
+---
+title: "Laboratorio 5"
+output: html_notebook
+---
+
+## Implementación
+```{r}
+get_fitness <- function(chromosome,train,test,label){
+  print(chromosome)
+  col_names <- names(train)
+  inputs<-
+    setdiff(col_names,label)
+  chromosome <- as.logical(chromosome)
+  formula<-paste0(inputs[chromosome],collapse = '+')
+  formula <- paste0(label,"~",formula)
+  fit <- lm(formula,data=train)
+  pred<-predict(fit,test)
+  error_square <- sum((pred-test$medv)^2)
+  return(error_square)
+}
+
+get_fitness_1_x <- function(chromosome,train,test,label){
+  print(chromosome)
+  col_names <- names(train)
+  inputs<-
+    setdiff(col_names,label)
+  chromosome <- as.logical(chromosome)
+  exes <- inputs[chromosome]
+  formula<-paste0("I(1/",exes,")", collapse = '+')
+  formula <- paste0(label,"~",formula)
+  fit <- lm(formula,data=train, na.action = na.exclude)
+  pred<-predict(fit,test)
+  error_square <- sum((pred-test$medv)^2)
+  return(error_square)
+}
+
+get_fitness_x_2 <- function(chromosome,train,test,label){
+  print(chromosome)
+  col_names <- names(train)
+  inputs<-
+    setdiff(col_names,label)
+  chromosome <- as.logical(chromosome)
+  exes <- inputs[chromosome]
+  formula<-paste0("I(",exes,"^2)", collapse = '+')
+  formula <- paste0(label,"~",formula)
+  fit <- lm(formula,data=train, na.action = na.exclude)
+  pred<-predict(fit,test)
+  error_square <- sum((pred-test$medv)^2)
+  return(error_square)
+}
+
+
+get_fitness_x_3 <- function(chromosome,train,test,label){
+  print(chromosome)
+  col_names <- names(train)
+  inputs<-
+    setdiff(col_names,label)
+  chromosome <- as.logical(chromosome)
+  exes <- inputs[chromosome]
+  formula<-paste0("I(",exes,"^3)", collapse = '+')
+  formula <- paste0(label,"~",formula)
+  fit <- lm(formula,data=train, na.action = na.exclude)
+  pred<-predict(fit,test)
+  error_square <- sum((pred-test$medv)^2)
+  return(error_square)
+}
+
+
+```
+
+
+## Lineal
+```{r echo=TRUE}
+train_index <- createDataPartition(Boston$medv,p=0.75,list = F)
+train <- Boston[train_index,]
+test <- Boston[-train_index,]
+pop_size <- 1000
+population<-
+  lapply(1:pop_size, get_chromosome, train=train, label="medv")
+
+
+
+for(i in 1:1){
+  print(paste0("generation= ",i,collapse="") )
+  fitness <- lapply(population, 
+                    get_fitness , 
+                    train=train,test=test, label="medv")
+  
+  
+  roullete<-
+    tibble(parent=1:pop_size, fitness= fitness %>% unlist()) %>%
+    arrange(desc(fitness))
+  
+  
+  roullete$rank <- 1:nrow(roullete)
+  
+  roullete <-
+    roullete %>% 
+    mutate(cumsum_rank = cumsum(rank))
+  
+  mating_parents<-
+    lapply(1:(2*pop_size), select_mating_parents,
+           pop_size=pop_size,
+           roullete=roullete, 
+           population=population)
+  
+  children<-
+    lapply(mating_parents, crossover)
+  
+  children<-
+    children %>% unlist(recursive = F)
+  
+  children<-
+    children[1:pop_size]
+  
+  top_parent <- roullete %>% tail(1) %>% pull(parent)
+  top_parent_fitness <- roullete %>% tail(1) %>% pull(fitness)
+  print(population[[top_parent]])
+  print(paste0("top parent fitness ",top_parent_fitness,collapse = " ") )
+  
+  
+  population<-
+    lapply(children, mutation, rate=0.01)
+  
+  
+}
+
+
+```
+
+## 1/X
+
+```{r echo=TRUE}
+train_index <- createDataPartition(Boston$medv,p=0.75,list = F)
+train <- Boston[train_index,]
+train[train == 0] <- 0.000000000001
+
+test <- Boston[-train_index,]
+test[test == 0] <- 0.000000000001
+
+pop_size <- 1000
+population<-
+  lapply(1:pop_size, get_chromosome, train=train, label="medv")
+
+
+
+for(i in 1:1){
+  print(paste0("generation= ",i,collapse="") )
+  fitness <- lapply(population, 
+                    get_fitness_1_x , 
+                    train=train,test=test, label="medv")
+  
+  
+  roullete<-
+    tibble(parent=1:pop_size, fitness= fitness %>% unlist()) %>%
+    arrange(desc(fitness))
+  
+  
+  roullete$rank <- 1:nrow(roullete)
+  
+  roullete <-
+    roullete %>% 
+    mutate(cumsum_rank = cumsum(rank))
+  
+  mating_parents<-
+    lapply(1:(2*pop_size), select_mating_parents,
+           pop_size=pop_size,
+           roullete=roullete, 
+           population=population)
+  
+  children<-
+    lapply(mating_parents, crossover)
+  
+  children<-
+    children %>% unlist(recursive = F)
+  
+  children<-
+    children[1:pop_size]
+  
+  top_parent <- roullete %>% tail(1) %>% pull(parent)
+  top_parent_fitness <- roullete %>% tail(1) %>% pull(fitness)
+  print(population[[top_parent]])
+  print(paste0("top parent fitness ",top_parent_fitness,collapse = " ") )
+  
+  
+  population<-
+    lapply(children, mutation, rate=0.1)
+  
+  
+}
+
+
+
+```
+
+## X^2
+
+```{r echo=TRUE}
+train_index <- createDataPartition(Boston$medv,p=0.75,list = F)
+train <- Boston[train_index,]
+test <- Boston[-train_index,]
+
+pop_size <- 1000
+population<-
+  lapply(1:pop_size, get_chromosome, train=train, label="medv")
+
+
+
+for(i in 1:1){
+  print(paste0("generation= ",i,collapse="") )
+  fitness <- lapply(population, 
+                    get_fitness_x_2 , 
+                    train=train,test=test, label="medv")
+  
+  
+  roullete<-
+    tibble(parent=1:pop_size, fitness= fitness %>% unlist()) %>%
+    arrange(desc(fitness))
+  
+  
+  roullete$rank <- 1:nrow(roullete)
+  
+  roullete <-
+    roullete %>% 
+    mutate(cumsum_rank = cumsum(rank))
+  
+  mating_parents<-
+    lapply(1:(2*pop_size), select_mating_parents,
+           pop_size=pop_size,
+           roullete=roullete, 
+           population=population)
+  
+  children<-
+    lapply(mating_parents, crossover)
+  
+  children<-
+    children %>% unlist(recursive = F)
+  
+  children<-
+    children[1:pop_size]
+  
+  top_parent <- roullete %>% tail(1) %>% pull(parent)
+  top_parent_fitness <- roullete %>% tail(1) %>% pull(fitness)
+  print(population[[top_parent]])
+  print(paste0("top parent fitness ",top_parent_fitness,collapse = " ") )
+  
+  
+  population<-
+    lapply(children, mutation, rate=0.1)
+  
+  
+}
+```
+
+## X^3
+
+```{r echo=TRUE}
+train_index <- createDataPartition(Boston$medv,p=0.75,list = F)
+train <- Boston[train_index,]
+test <- Boston[-train_index,]
+
+pop_size <- 1000
+population<-
+  lapply(1:pop_size, get_chromosome, train=train, label="medv")
+
+
+
+for(i in 1:1){
+  print(paste0("generation= ",i,collapse="") )
+  fitness <- lapply(population, 
+                    get_fitness_x_3 , 
+                    train=train,test=test, label="medv")
+  
+  
+  roullete<-
+    tibble(parent=1:pop_size, fitness= fitness %>% unlist()) %>%
+    arrange(desc(fitness))
+  
+  
+  roullete$rank <- 1:nrow(roullete)
+  
+  roullete <-
+    roullete %>% 
+    mutate(cumsum_rank = cumsum(rank))
+  
+  mating_parents<-
+    lapply(1:(2*pop_size), select_mating_parents,
+           pop_size=pop_size,
+           roullete=roullete, 
+           population=population)
+  
+  children<-
+    lapply(mating_parents, crossover)
+  
+  children<-
+    children %>% unlist(recursive = F)
+  
+  children<-
+    children[1:pop_size]
+  
+  top_parent <- roullete %>% tail(1) %>% pull(parent)
+  top_parent_fitness <- roullete %>% tail(1) %>% pull(fitness)
+  print(population[[top_parent]])
+  print(paste0("top parent fitness ",top_parent_fitness,collapse = " ") )
+  
+  
+  population<-
+    lapply(children, mutation, rate=0.1)
+  
+  
+}
+
+
+
+```
+
+
+# Resultados
+
+|Modelo|Top Fitness|
+|---|---|
+|Lineal|1958.62|
+|1/x|3524.96|
+|x^2|3035.86|
+|x^3|2804.07|
